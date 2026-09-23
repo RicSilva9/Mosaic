@@ -24,7 +24,7 @@ When that result is published as a new Creation, Mosaic can preserve its relatio
 
 Over time, these relationships form a **Lineage**.
 
-```text id="f8uj2a"
+```text
 Creation A
 │
 ├── Creation B
@@ -46,7 +46,7 @@ Creative ideas rarely remain static.
 
 A useful Prompt may be:
 
-```text id="yz76pn"
+```text
 discovered
     ↓
 understood
@@ -84,7 +84,7 @@ but also:
 
 The system distinguishes several related concepts.
 
-```text id="ty8t9n"
+```text
 DERIVATION
 Relationship between two Creations
 
@@ -114,7 +114,7 @@ A **Derivation** exists when a new Creation is intentionally published as having
 
 Example:
 
-```text id="4cgmzy"
+```text
 Creation A
     ↓
 Creation B
@@ -136,7 +136,7 @@ A derived Creation must preserve its **direct source**.
 
 Consider:
 
-```text id="yp3vg5"
+```text
 A
 ↓
 B
@@ -148,14 +148,14 @@ C was created from B.
 
 Therefore:
 
-```text id="ft3a7g"
+```text
 Parent of B = A
 Parent of C = B
 ```
 
 Mosaic should not flatten this into:
 
-```text id="8jmkib"
+```text
 A
 ├── B
 └── C
@@ -171,7 +171,7 @@ The **Origin** represents the earliest known Creation in a Lineage.
 
 Example:
 
-```text id="egxf46"
+```text
 A
 ↓
 B
@@ -183,7 +183,7 @@ D
 
 For D:
 
-```text id="tbnxha"
+```text
 Direct Parent = C
 Origin = A
 ```
@@ -200,7 +200,7 @@ A **Lineage** is the historical structure created by connected derivations.
 
 Lineage may be simple:
 
-```text id="4xvscj"
+```text
 A
 ↓
 B
@@ -210,7 +210,7 @@ C
 
 or branch:
 
-```text id="wr7sg8"
+```text
 A
 ├── B
 │   ├── D
@@ -232,7 +232,7 @@ A **Remix** is a new Creation published from another Creation through Mosaic's d
 
 Example:
 
-```text id="yynac7"
+```text
 Creation A — @Ana
        ↓
 Creation B — @Carlos
@@ -262,7 +262,7 @@ A Remix is not an edit of the original Creation.
 
 It is a new independent Creation.
 
-```text id="czmyd6"
+```text
 Creation A
 Author: Ana
 
@@ -281,7 +281,7 @@ A creator may continue developing their own previous Creation.
 
 Example:
 
-```text id="f2ddkl"
+```text
 Creation A — @Ana
        ↓
 Creation B — @Ana
@@ -301,19 +301,19 @@ The underlying Lineage System should not require different structural relationsh
 
 Both:
 
-```text id="j7y7s7"
+```text
 Ana → Ana
 ```
 
 and:
 
-```text id="ez8i50"
+```text
 Ana → Carlos
 ```
 
 can represent:
 
-```text id="76cqlx"
+```text
 Parent Creation
        ↓
 Derived Creation
@@ -323,7 +323,7 @@ However, Mosaic may present them differently to users.
 
 For example:
 
-```text id="ftkg16"
+```text
 Updated approach by @Ana
 
 Remix by @Carlos
@@ -341,7 +341,7 @@ The underlying lineage relationship remains the same.
 
 Customization alone does not create Lineage.
 
-```text id="rd1n21"
+```text
 Creation A
       ↓
 Customize
@@ -353,7 +353,7 @@ At this stage, no public Creation exists.
 
 Only after publication:
 
-```text id="kikvt3"
+```text
 Creation A
       ↓
 Customize
@@ -373,7 +373,7 @@ does B become part of the Lineage.
 
 Copying a Prompt also does not automatically create a new Lineage node.
 
-```text id="98qd7v"
+```text
 Copy Prompt
      ↓
 No new Creation
@@ -407,7 +407,7 @@ A derived Creation should clearly acknowledge its direct source.
 
 Conceptually:
 
-```text id="8dr2q7"
+```text
 Creation B
 by @Carlos
 
@@ -439,7 +439,7 @@ Each Creation belongs to its own author within Mosaic's applicable platform rule
 
 Example:
 
-```text id="7rxt4n"
+```text
 Creation A — Ana controls A
        ↓
 Creation B — Carlos controls B
@@ -481,7 +481,7 @@ Public Creations should be remixable by default.
 
 This supports the central Mosaic cycle:
 
-```text id="6f1kkd"
+```text
 Discover
    ↓
 Understand
@@ -537,7 +537,7 @@ If a creator believes a Remix violates Mosaic's rules, they may report it.
 
 Example:
 
-```text id="d7wwqn"
+```text
 Creation A — Ana
        ↓
 Creation B — Carlos
@@ -559,7 +559,7 @@ A Creation may have zero, one, or many direct descendants.
 
 Example:
 
-```text id="kpyu16"
+```text
 Creation A
 │
 ├── B
@@ -570,7 +570,7 @@ Creation A
 
 Mosaic may surface this information as something like:
 
-```text id="46npfn"
+```text
 Variations of this Creation
 37
 ```
@@ -583,7 +583,7 @@ The exact wording and interface will be defined later.
 
 Lineage can continue indefinitely in principle.
 
-```text id="uwz5rw"
+```text
 A
 ↓
 B
@@ -605,7 +605,7 @@ Technical safeguards may eventually be necessary for extremely large Lineages, b
 
 Different users may take the same Creation in different directions.
 
-```text id="rqv6ax"
+```text
                  A
           ┌──────┼──────┐
           ↓      ↓      ↓
@@ -626,7 +626,7 @@ It is a fundamental behavior of Mosaic.
 
 The current model naturally assumes:
 
-```text id="xpy4vr"
+```text
 Derived Creation
        ↓
 One direct parent
@@ -634,7 +634,7 @@ One direct parent
 
 However, future creative workflows could combine multiple Creations:
 
-```text id="2vc9ro"
+```text
 Creation A ──┐
              ├── Creation C
 Creation B ──┘
@@ -671,7 +671,7 @@ Its disappearance should not automatically rewrite the history of its descendant
 
 Consider:
 
-```text id="j1vsd7"
+```text
 A
 ↓
 B
@@ -681,7 +681,7 @@ C
 
 If B becomes unavailable:
 
-```text id="32snzr"
+```text
 A
 ↓
 [Creation unavailable]
@@ -699,7 +699,7 @@ A historical placeholder for unavailable content may be referred to conceptually
 
 Example:
 
-```text id="oh4zbq"
+```text
 [Creation unavailable]
 ```
 
@@ -722,7 +722,7 @@ If a Creation disappears while descendants remain, Mosaic should preserve enough
 
 This means:
 
-```text id="13igwm"
+```text
 A
 ↓
 B
@@ -732,7 +732,7 @@ C
 
 must not silently become:
 
-```text id="5ogpkl"
+```text
 A
 ↓
 C
@@ -768,7 +768,7 @@ If an author's account is deleted, Lineage should remain structurally valid.
 
 Example:
 
-```text id="zhb7gz"
+```text
 Creation A — @Ana
        ↓
 Creation B — Deleted User
@@ -800,7 +800,7 @@ It does not rewrite history.
 
 Example:
 
-```text id="tvfh7k"
+```text
 Ana creates A
        ↓
 Carlos creates B
@@ -810,7 +810,7 @@ Ana blocks Carlos
 
 The relationship:
 
-```text id="nmxyqa"
+```text
 A → B
 ```
 
@@ -850,7 +850,7 @@ A Creation must never become its own ancestor.
 
 Invalid:
 
-```text id="rca98c"
+```text
 A
 ↓
 B
@@ -874,7 +874,7 @@ A derived Creation cannot historically originate from a Creation that did not ye
 
 Therefore, the parent relationship must represent a valid direction of creative history:
 
-```text id="v5h8ap"
+```text
 Earlier source
      ↓
 Later derived Creation
@@ -925,7 +925,7 @@ Users should be able to explore the evolution of a Creation.
 
 Possible navigation includes:
 
-```text id="u07emw"
+```text
 View Parent
 
 View Origin
@@ -943,7 +943,7 @@ A user viewing a deep descendant should be able to understand that it belongs to
 
 A visual Lineage representation may eventually show:
 
-```text id="cbkq4b"
+```text
 Original — @Ana
 │
 ├── @Carlos
@@ -988,7 +988,7 @@ Lineage creates additional discovery opportunities.
 
 A user may discover:
 
-```text id="d6b48u"
+```text
 Most remixed Creations
 
 Interesting variations
@@ -1012,7 +1012,7 @@ When a new direct descendant is published, the parent Creation's author may rece
 
 Example:
 
-```text id="q0yj7h"
+```text
 Carlos publishes B
 derived from Ana's A
 
@@ -1036,7 +1036,7 @@ Ancestor notifications, summaries, or milestones may be considered later.
 
 Mosaic may track information such as:
 
-```text id="6v6g8l"
+```text
 Direct descendants
 Total descendants
 Lineage depth
@@ -1059,7 +1059,7 @@ Moderation actions against one Creation should not automatically punish its enti
 
 Example:
 
-```text id="pp39p2"
+```text
 A
 ↓
 B ← violates a rule
@@ -1105,7 +1105,7 @@ A derived Creation becomes another piece.
 
 Together, these pieces reveal the history of an idea.
 
-```text id="w7ekht"
+```text
 One Creation
       ↓
 Many interpretations

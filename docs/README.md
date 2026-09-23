@@ -69,14 +69,12 @@ Understand **how Mosaic will be engineered and operated**.
 
 ## 04 — Delivery
 
-Understand **what will be built, in which order, and how Mosaic may evolve**.
+Understand **what Mosaic intends to deliver first and how the Product may evolve over time**.
 
 | Document                                                  | Description                                                                 |
 | --------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [MVP](./04-delivery/mvp.md)                               | Definition and boundaries of the first viable version of Mosaic.            |
-| [Development Phases](./04-delivery/development-phases.md) | Planned implementation stages and their objectives.                         |
 | [Roadmap](./04-delivery/roadmap.md)                       | Long-term product evolution.                                                |
-| [Open Decisions](./04-delivery/open-decisions.md)         | Important product and technical decisions that have not yet been finalized. |
 | [Glossary](./04-delivery/glossary.md)                     | Official terminology used throughout Mosaic.                                |
 
 ---
@@ -103,11 +101,11 @@ Start with:
 
 **[Architecture](./03-technical/architecture.md) → [Data Model](./03-technical/data-model.md) → [Functional Requirements](./02-specification/functional-requirements.md) → [API](./03-technical/api.md) → [Security & Privacy](./03-technical/security.md)**
 
-### I want to understand what will be built first
+### I want to understand Mosaic's delivery direction
 
 Start with:
 
-**[MVP](./04-delivery/mvp.md) → [Development Phases](./04-delivery/development-phases.md) → [Roadmap](./04-delivery/roadmap.md)**
+**[MVP](./04-delivery/mvp.md) → [Roadmap](./04-delivery/roadmap.md) → [Glossary](./04-delivery/glossary.md)**
 
 ---
 

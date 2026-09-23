@@ -38,7 +38,7 @@ The documentation covers:
 * Business rules and requirements
 * Architecture and data model
 * Security and scalability
-* MVP and development roadmap
+* MVP and Product roadmap
 
 ## 🚧 Project Status
 
