@@ -1643,4 +1643,4 @@ The central architectural principle remains:
 
 ---
 
-**Previous:** [← Non-Functional Requirements](../02-specification/non-functional-requirements.md) · [Documentation Home](../README.md) · **Next:** [Data Model →](./data-model.md)
+**Previous:** [← Non-Functional Requirements](../02-specification/non-functional-requirements.md) · [Documentation Home](../README.md) · **Next:** [Technology Stack →](./technology-stack.md)

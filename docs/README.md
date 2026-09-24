@@ -64,6 +64,7 @@ Understand **how Mosaic will be engineered and operated**.
 | [Observability](./03-technical/observability.md)           | Logs, metrics, monitoring, and diagnostics.                   |
 | [Testing](./03-technical/testing.md)                       | Testing strategy and quality assurance.                       |
 | [Deployment](./03-technical/deployment.md)                 | Environments, CI/CD, infrastructure, and deployment.          |
+| [Technology Stack](./03-technical/technology-stack.md)     | Technologies and implementation decisions.                    |
 
 ---
 
