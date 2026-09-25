@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 interface CreateIdentityInput {
@@ -15,7 +16,6 @@ export class IdentityService {
 
   async createIdentity(input: CreateIdentityInput) {
     const normalizedUsername = input.username.trim().toLowerCase();
-
     const normalizedEmail = input.email?.trim().toLowerCase();
 
     const existingProfile = await this.prisma.profile.findUnique({
@@ -26,29 +26,42 @@ export class IdentityService {
       throw new ConflictException('Username is already in use');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      return tx.user.create({
-        data: {
-          account: {
-            create: {
-              authProvider: input.authProvider,
-              authProviderId: input.authProviderId,
-              email: input.email,
-              normalizedEmail,
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        return tx.user.create({
+          data: {
+            account: {
+              create: {
+                authProvider: input.authProvider,
+                authProviderId: input.authProviderId,
+                email: input.email,
+                normalizedEmail,
+              },
+            },
+            profile: {
+              create: {
+                username: input.username.trim(),
+                normalizedUsername,
+                displayName: input.displayName.trim(),
+              },
             },
           },
-          profile: {
-            create: {
-              username: input.username.trim(),
-              normalizedUsername,
-              displayName: input.displayName.trim(),
-            },
+          include: {
+            profile: true,
           },
-        },
-        include: {
-          profile: true,
-        },
+        });
       });
-    });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'An account or profile with these details already exists',
+        );
+      }
+
+      throw error;
+    }
   }
 }

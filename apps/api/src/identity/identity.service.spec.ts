@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictException } from '@nestjs/common';
 import { IdentityService } from './identity.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Prisma } from '../generated/prisma/client.js';
 
 describe('IdentityService', () => {
   const findUnique = vi.fn();
@@ -95,6 +96,23 @@ describe('IdentityService', () => {
 
     await expect(service.createIdentity(input)).rejects.toThrow(
       'Database operation failed',
+    );
+
+    expect(transaction).toHaveBeenCalledOnce();
+  });
+
+  it('converts Prisma unique constraint errors into conflicts', async () => {
+    findUnique.mockResolvedValue(null);
+
+    create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.0',
+      }),
+    );
+
+    await expect(service.createIdentity(input)).rejects.toThrow(
+      ConflictException,
     );
 
     expect(transaction).toHaveBeenCalledOnce();
