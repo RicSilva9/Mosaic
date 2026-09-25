@@ -1,4 +1,11 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 
 import { IdentityService } from './identity.service.js';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
@@ -19,15 +26,23 @@ export class IdentityController {
     const authenticatedUser = request.user;
 
     if (!authenticatedUser) {
-      throw new Error('Authenticated user is missing');
+      throw new UnauthorizedException('Authentication is required');
     }
 
-    return this.identityService.createIdentity({
+    const user = await this.identityService.createIdentity({
       authProvider: 'supabase',
       authProviderId: authenticatedUser.providerId,
       email: authenticatedUser.email,
       username: body.username,
       displayName: body.displayName,
     });
+
+    return {
+      id: user.id,
+      profile: {
+        username: user.profile?.username,
+        displayName: user.profile?.displayName,
+      },
+    };
   }
 }

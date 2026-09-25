@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -16,10 +17,30 @@ export class IdentityService {
 
   async createIdentity(input: CreateIdentityInput) {
     const normalizedUsername = input.username.trim().toLowerCase();
+
     const normalizedEmail = input.email?.trim().toLowerCase();
 
+    // Verifica se a conta do provedor já foi cadastrada.
+    const existingAccount = await this.prisma.account.findUnique({
+      where: {
+        authProvider_authProviderId: {
+          authProvider: input.authProvider,
+          authProviderId: input.authProviderId,
+        },
+      },
+    });
+
+    if (existingAccount) {
+      throw new ConflictException(
+        'This authentication account is already registered',
+      );
+    }
+
+    // Verifica se o nome de usuário está disponível.
     const existingProfile = await this.prisma.profile.findUnique({
-      where: { normalizedUsername },
+      where: {
+        normalizedUsername,
+      },
     });
 
     if (existingProfile) {
@@ -52,6 +73,7 @@ export class IdentityService {
         });
       });
     } catch (error) {
+      // Proteção adicional contra cadastros simultâneos.
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'

@@ -157,4 +157,37 @@ describe('Identity registration validation', () => {
 
     expect(createIdentity).not.toHaveBeenCalled();
   });
+
+  it('returns only the public registration fields', async () => {
+    createIdentity.mockResolvedValueOnce({
+      id: 'internal-user-id',
+      profile: {
+        username: 'ricardo_dev',
+        displayName: 'Ricardo',
+      },
+      account: {
+        authProviderId: 'private-provider-id',
+        email: 'private@example.com',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/identity/register')
+      .send({
+        username: 'ricardo_dev',
+        displayName: 'Ricardo',
+      })
+      .expect(201);
+
+    expect(response.body).toEqual({
+      id: 'internal-user-id',
+      profile: {
+        username: 'ricardo_dev',
+        displayName: 'Ricardo',
+      },
+    });
+
+    expect(response.body).not.toHaveProperty('account');
+    expect(response.body).not.toHaveProperty('email');
+  });
 });

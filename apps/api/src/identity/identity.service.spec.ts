@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictException } from '@nestjs/common';
+
 import { IdentityService } from './identity.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 
 describe('IdentityService', () => {
-  const findUnique = vi.fn();
+  const findAccount = vi.fn();
+  const findProfile = vi.fn();
   const create = vi.fn();
   const transaction = vi.fn();
 
@@ -14,6 +16,10 @@ describe('IdentityService', () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
+    // Por padrão, não existem contas ou perfis duplicados.
+    findAccount.mockResolvedValue(null);
+    findProfile.mockResolvedValue(null);
+
     transaction.mockImplementation(async (callback) =>
       callback({
         user: { create },
@@ -21,7 +27,12 @@ describe('IdentityService', () => {
     );
 
     const prisma = {
-      profile: { findUnique },
+      account: {
+        findUnique: findAccount,
+      },
+      profile: {
+        findUnique: findProfile,
+      },
       $transaction: transaction,
     } as unknown as PrismaService;
 
@@ -37,8 +48,6 @@ describe('IdentityService', () => {
   };
 
   it('creates an identity in a transaction', async () => {
-    findUnique.mockResolvedValue(null);
-
     const createdUser = {
       id: 'user-id',
       profile: {
@@ -78,7 +87,7 @@ describe('IdentityService', () => {
   });
 
   it('rejects duplicate usernames', async () => {
-    findUnique.mockResolvedValue({
+    findProfile.mockResolvedValue({
       id: 'existing-profile',
     });
 
@@ -90,8 +99,6 @@ describe('IdentityService', () => {
   });
 
   it('propagates transaction failures', async () => {
-    findUnique.mockResolvedValue(null);
-
     create.mockRejectedValue(new Error('Database operation failed'));
 
     await expect(service.createIdentity(input)).rejects.toThrow(
@@ -102,8 +109,6 @@ describe('IdentityService', () => {
   });
 
   it('converts Prisma unique constraint errors into conflicts', async () => {
-    findUnique.mockResolvedValue(null);
-
     create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
@@ -116,5 +121,39 @@ describe('IdentityService', () => {
     );
 
     expect(transaction).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an authentication account that is already registered', async () => {
+    findAccount.mockResolvedValue({
+      id: 'existing-account',
+      authProvider: 'supabase',
+      authProviderId: 'external-user-id',
+    });
+
+    await expect(service.createIdentity(input)).rejects.toThrow(
+      'This authentication account is already registered',
+    );
+
+    expect(findProfile).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('checks the authentication provider and provider ID', async () => {
+    create.mockResolvedValue({
+      id: 'user-id',
+    });
+
+    await service.createIdentity(input);
+
+    expect(findAccount).toHaveBeenCalledExactlyOnceWith({
+      where: {
+        authProvider_authProviderId: {
+          authProvider: 'supabase',
+          authProviderId: 'external-user-id',
+        },
+      },
+    });
+
+    expect(findProfile).toHaveBeenCalledOnce();
   });
 });
