@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import {
   createRemoteJWKSet,
   jwtVerify,
@@ -21,7 +21,7 @@ export class AuthService {
   private readonly issuer: string;
   private readonly jwks: JWTVerifyGetKey;
 
-  constructor(options?: AuthServiceOptions) {
+  constructor(@Optional() options?: AuthServiceOptions) {
     if (options) {
       this.issuer = options.issuer;
       this.jwks = options.jwks;
