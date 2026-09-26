@@ -19,12 +19,15 @@ interface Identity {
   profile: {
     username: string;
     displayName: string;
+    avatarUrl?: string | null;
   };
 }
 
 interface PlatformAuthContextValue {
   identity: Identity;
-  updateIdentityProfile: (profile: { displayName: string }) => void;
+  updateIdentityProfile: (
+    profile: Partial<Pick<Identity["profile"], "displayName" | "avatarUrl">>,
+  ) => void;
   logout: () => Promise<void>;
   loggingOut: boolean;
   logoutError: string;
@@ -114,8 +117,49 @@ export function PlatformAuthGuard({ children }: { children: ReactNode }) {
           throw new Error("Invalid profile response.");
         }
 
-        setIdentity(data);
+        setIdentity({
+          ...data,
+          profile: {
+            ...data.profile,
+            avatarUrl: data.profile.avatarUrl ?? null,
+          },
+        });
         setStatus("ready");
+
+        // Load the public avatar without blocking authentication.
+        try {
+          const profileResponse = await fetch(
+            `${API_URL}/profiles/${encodeURIComponent(data.profile.username)}`,
+            {
+              cache: "no-store",
+              signal,
+            },
+          );
+
+          if (!profileResponse.ok || signal.aborted) return;
+
+          const publicProfile: {
+            avatarUrl: string | null;
+          } = await profileResponse.json();
+
+          if (signal.aborted) return;
+
+          setIdentity((current) => {
+            if (!current || current.id !== data.id) {
+              return current;
+            }
+
+            return {
+              ...current,
+              profile: {
+                ...current.profile,
+                avatarUrl: publicProfile.avatarUrl ?? null,
+              },
+            };
+          });
+        } catch {
+          // A failed avatar request must not block access.
+        }
       } catch (err) {
         if (signal.aborted) return;
 
@@ -138,7 +182,9 @@ export function PlatformAuthGuard({ children }: { children: ReactNode }) {
   }, [checkAccess, retryCount]);
 
   const updateIdentityProfile = useCallback(
-    (profile: { displayName: string }) => {
+    (
+      profile: Partial<Pick<Identity["profile"], "displayName" | "avatarUrl">>,
+    ) => {
       setIdentity((current) => {
         if (!current) return current;
 
@@ -146,7 +192,7 @@ export function PlatformAuthGuard({ children }: { children: ReactNode }) {
           ...current,
           profile: {
             ...current.profile,
-            displayName: profile.displayName,
+            ...profile,
           },
         };
       });

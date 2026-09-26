@@ -1,0 +1,565 @@
+]633;E;for file in apps/api/src/profiles/*.spec.ts apps/api/src/storage/*.spec.ts;76774118-54de-475e-aa93-a9f8af20bd33]633;C========== apps/api/src/profiles/profiles.http.spec.ts ==========
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
+import { AuthService } from '../auth/auth.service.js';
+
+import { PrismaService } from '../prisma/prisma.service.js';
+
+import { Test } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+
+import { ProfilesModule } from './profiles.module.js';
+import { ProfilesService } from './profiles.service.js';
+
+describe('Profiles HTTP', () => {
+  let app: INestApplication;
+
+  const findByUsername = vi.fn();
+
+  const publicProfile = {
+    username: 'teste',
+    displayName: 'teste1',
+    bio: null,
+    avatarKey: null,
+  };
+
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      imports: [ProfilesModule],
+    })
+      .overrideProvider(ProfilesService)
+      .useValue({ findByUsername })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(AuthService)
+      .useValue({
+        verifyAccessToken: vi.fn(),
+      })
+      .compile();
+
+    app = module.createNestApplication();
+    await app.init();
+  });
+
+  beforeEach(() => {
+    findByUsername.mockReset();
+  });
+
+  afterAll(async () => {
+    await app?.close();
+  });
+
+  it('returns a public profile without authentication', async () => {
+    findByUsername.mockResolvedValueOnce(publicProfile);
+
+    const response = await request(app.getHttpServer())
+      .get('/profiles/teste')
+      .expect(200);
+
+    expect(response.body).toEqual(publicProfile);
+    expect(findByUsername).toHaveBeenCalledWith('teste');
+  });
+
+  it('passes uppercase usernames to the service', async () => {
+    findByUsername.mockResolvedValueOnce(publicProfile);
+
+    const response = await request(app.getHttpServer())
+      .get('/profiles/TESTE')
+      .expect(200);
+
+    expect(response.body).toEqual(publicProfile);
+    expect(findByUsername).toHaveBeenCalledWith('TESTE');
+  });
+
+  it('returns 404 when the profile does not exist', async () => {
+    findByUsername.mockRejectedValueOnce(
+      new NotFoundException('Profile not found'),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/profiles/usuario_inexistente')
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+      message: 'Profile not found',
+    });
+  });
+
+  it('returns only the public profile response', async () => {
+    findByUsername.mockResolvedValueOnce(publicProfile);
+
+    const response = await request(app.getHttpServer())
+      .get('/profiles/teste')
+      .expect(200);
+
+    expect(Object.keys(response.body).sort()).toEqual(
+      ['username', 'displayName', 'bio', 'avatarKey'].sort(),
+    );
+
+    expect(response.body).not.toHaveProperty('email');
+    expect(response.body).not.toHaveProperty('userId');
+    expect(response.body).not.toHaveProperty('authProviderId');
+  });
+});
+========== apps/api/src/profiles/profiles.service.spec.ts ==========
+import { NotFoundException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ProfilesService } from './profiles.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+
+describe('ProfilesService', () => {
+  const findUnique = vi.fn();
+
+  let service: ProfilesService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    const prisma = {
+      profile: {
+        findUnique,
+      },
+    } as unknown as PrismaService;
+
+    service = new ProfilesService(prisma);
+  });
+
+  it('returns the public profile fields', async () => {
+    findUnique.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo',
+      bio: 'AI video creator',
+      avatarKey: null,
+    });
+
+    await expect(service.findByUsername('ricardo')).resolves.toEqual({
+      username: 'ricardo',
+      displayName: 'Ricardo',
+      bio: 'AI video creator',
+      avatarKey: null,
+    });
+
+    expect(findUnique).toHaveBeenCalledWith({
+      where: {
+        normalizedUsername: 'ricardo',
+      },
+      select: {
+        username: true,
+        displayName: true,
+        bio: true,
+        avatarKey: true,
+      },
+    });
+  });
+
+  it('normalizes the username before querying', async () => {
+    findUnique.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo',
+      bio: null,
+      avatarKey: null,
+    });
+
+    await service.findByUsername('  RICARDO  ');
+
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          normalizedUsername: 'ricardo',
+        },
+      }),
+    );
+  });
+
+  it('throws 404 when the profile does not exist', async () => {
+    findUnique.mockResolvedValue(null);
+
+    await expect(service.findByUsername('unknown')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('does not expose private fields', async () => {
+    findUnique.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo',
+      bio: null,
+      avatarKey: null,
+    });
+
+    const result = await service.findByUsername('ricardo');
+
+    expect(result).not.toHaveProperty('email');
+    expect(result).not.toHaveProperty('authProviderId');
+    expect(result).not.toHaveProperty('userId');
+    expect(result).not.toHaveProperty('normalizedUsername');
+  });
+});
+========== apps/api/src/profiles/profiles.update.http.spec.ts ==========
+import { UnauthorizedException, ValidationPipe } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AuthService } from '../auth/auth.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { ProfilesModule } from './profiles.module.js';
+import { ProfilesService } from './profiles.service.js';
+
+describe('Profiles update HTTP', () => {
+  let app: INestApplication;
+
+  const verifyAccessToken = vi.fn();
+  const updateMyProfile = vi.fn();
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    verifyAccessToken.mockResolvedValue({
+      providerId: 'supabase-user-123',
+      email: 'user@example.com',
+    });
+
+    updateMyProfile.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo Silva',
+      bio: 'Frontend developer',
+      avatarKey: null,
+    });
+
+    const module = await Test.createTestingModule({
+      imports: [ProfilesModule],
+    })
+      .overrideProvider(AuthService)
+      .useValue({
+        verifyAccessToken,
+      })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(ProfilesService)
+      .useValue({
+        updateMyProfile,
+        findByUsername: vi.fn(),
+      })
+      .compile();
+
+    app = module.createNestApplication();
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
+    await app.init();
+  });
+
+  afterEach(async () => {
+    await app?.close();
+  });
+
+  it('rejects requests without authentication', async () => {
+    await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .send({
+        displayName: 'Ricardo Silva',
+      })
+      .expect(401);
+
+    expect(updateMyProfile).not.toHaveBeenCalled();
+  });
+
+  it('updates the authenticated user profile', async () => {
+    const response = await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({
+        displayName: 'Ricardo Silva',
+        bio: 'Frontend developer',
+      })
+      .expect(200);
+
+    expect(verifyAccessToken).toHaveBeenCalledWith('valid-token');
+
+    expect(updateMyProfile).toHaveBeenCalledWith('supabase-user-123', {
+      displayName: 'Ricardo Silva',
+      bio: 'Frontend developer',
+    });
+
+    expect(response.body).toEqual({
+      username: 'ricardo',
+      displayName: 'Ricardo Silva',
+      bio: 'Frontend developer',
+      avatarKey: null,
+    });
+  });
+
+  it('rejects a blank display name', async () => {
+    await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({
+        displayName: '   ',
+      })
+      .expect(400);
+
+    expect(updateMyProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects biographies longer than 500 characters', async () => {
+    await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({
+        bio: 'a'.repeat(501),
+      })
+      .expect(400);
+
+    expect(updateMyProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects attempts to modify protected fields', async () => {
+    await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({
+        username: 'another_user',
+      })
+      .expect(400);
+
+    expect(updateMyProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid authentication tokens', async () => {
+    verifyAccessToken.mockRejectedValue(
+      new UnauthorizedException('Invalid token'),
+    );
+
+    await request(app.getHttpServer())
+      .patch('/profiles/me')
+      .set('Authorization', 'Bearer invalid-token')
+      .send({
+        bio: 'Updated biography',
+      })
+      .expect(401);
+
+    expect(updateMyProfile).not.toHaveBeenCalled();
+  });
+});
+========== apps/api/src/profiles/profiles.update.spec.ts ==========
+import { NotFoundException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ProfilesService } from './profiles.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+
+describe('ProfilesService - updateMyProfile', () => {
+  const findAccount = vi.fn();
+  const updateProfile = vi.fn();
+
+  let service: ProfilesService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    const prisma = {
+      account: {
+        findUnique: findAccount,
+      },
+      profile: {
+        update: updateProfile,
+      },
+    } as unknown as PrismaService;
+
+    service = new ProfilesService(prisma);
+
+    findAccount.mockResolvedValue({
+      userId: 'user-123',
+    });
+
+    updateProfile.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo Silva',
+      bio: 'Frontend developer',
+      avatarKey: null,
+    });
+  });
+
+  it('updates the display name of the authenticated user', async () => {
+    const result = await service.updateMyProfile('supabase-user-123', {
+      displayName: '  Ricardo Silva  ',
+    });
+
+    expect(findAccount).toHaveBeenCalledWith({
+      where: {
+        authProvider_authProviderId: {
+          authProvider: 'supabase',
+          authProviderId: 'supabase-user-123',
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-123',
+        },
+        data: {
+          displayName: 'Ricardo Silva',
+        },
+      }),
+    );
+
+    expect(result.displayName).toBe('Ricardo Silva');
+  });
+
+  it('updates the biography', async () => {
+    await service.updateMyProfile('supabase-user-123', {
+      bio: '  Frontend developer  ',
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          bio: 'Frontend developer',
+        },
+      }),
+    );
+  });
+
+  it('accepts an empty biography', async () => {
+    await service.updateMyProfile('supabase-user-123', {
+      bio: '',
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          bio: '',
+        },
+      }),
+    );
+  });
+
+  it('returns 404 when the account does not exist', async () => {
+    findAccount.mockResolvedValue(null);
+
+    await expect(
+      service.updateMyProfile('unknown-user', {
+        displayName: 'Ricardo',
+      }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('updates only the profile linked to the authenticated account', async () => {
+    findAccount.mockResolvedValue({
+      userId: 'authenticated-user',
+    });
+
+    await service.updateMyProfile('authenticated-provider-id', {
+      displayName: 'New Name',
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'authenticated-user',
+        },
+      }),
+    );
+  });
+});
+========== apps/api/src/storage/avatar.validator.spec.ts ==========
+import { describe, expect, it } from 'vitest';
+import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+
+import { MAX_AVATAR_SIZE, validateAvatar } from './avatar.validator.js';
+
+describe('validateAvatar', () => {
+  const userId = 'user-123';
+
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  const webp = Buffer.concat([
+    Buffer.from('RIFF'),
+    Buffer.alloc(4),
+    Buffer.from('WEBP'),
+  ]);
+
+  it('accepts JPEG images', () => {
+    const result = validateAvatar(jpeg, userId);
+
+    expect(result.contentType).toBe('image/jpeg');
+    expect(result.buffer).toBe(jpeg);
+    expect(result.key).toMatch(/^user-123\/[a-f0-9-]+\.jpg$/);
+  });
+
+  it('accepts PNG images', () => {
+    const result = validateAvatar(png, userId);
+
+    expect(result.contentType).toBe('image/png');
+    expect(result.key.endsWith('.png')).toBe(true);
+  });
+
+  it('accepts WebP images', () => {
+    const result = validateAvatar(webp, userId);
+
+    expect(result.contentType).toBe('image/webp');
+    expect(result.key.endsWith('.webp')).toBe(true);
+  });
+
+  it('rejects empty files', () => {
+    expect(() => validateAvatar(Buffer.alloc(0), userId)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('rejects unsupported files', () => {
+    expect(() => validateAvatar(Buffer.from('not an image'), userId)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('rejects files larger than 2 MB', () => {
+    const oversized = Buffer.concat([jpeg, Buffer.alloc(MAX_AVATAR_SIZE)]);
+
+    expect(() => validateAvatar(oversized, userId)).toThrow(
+      PayloadTooLargeException,
+    );
+  });
+
+  it('generates a different key for each upload', () => {
+    const first = validateAvatar(jpeg, userId);
+    const second = validateAvatar(jpeg, userId);
+
+    expect(first.key).not.toBe(second.key);
+  });
+
+  it('includes the user ID in the storage key', () => {
+    const result = validateAvatar(jpeg, userId);
+
+    expect(result.key.startsWith(`${userId}/`)).toBe(true);
+  });
+});

@@ -1,11 +1,13 @@
 import { NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProfilesService } from './profiles.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
+import { ProfilesService } from './profiles.service.js';
 
 describe('ProfilesService', () => {
   const findUnique = vi.fn();
+  const getPublicUrl = vi.fn();
 
   let service: ProfilesService;
 
@@ -18,7 +20,15 @@ describe('ProfilesService', () => {
       },
     } as unknown as PrismaService;
 
-    service = new ProfilesService(prisma);
+    const storage = {
+      getPublicUrl,
+    } as unknown as StorageService;
+
+    getPublicUrl.mockImplementation(
+      (key: string) => `https://storage.example.com/avatars/${key}`,
+    );
+
+    service = new ProfilesService(prisma, storage);
   });
 
   it('returns the public profile fields', async () => {
@@ -34,6 +44,7 @@ describe('ProfilesService', () => {
       displayName: 'Ricardo',
       bio: 'AI video creator',
       avatarKey: null,
+      avatarUrl: null,
     });
 
     expect(findUnique).toHaveBeenCalledWith({
@@ -47,6 +58,8 @@ describe('ProfilesService', () => {
         avatarKey: true,
       },
     });
+
+    expect(getPublicUrl).not.toHaveBeenCalled();
   });
 
   it('normalizes the username before querying', async () => {
@@ -90,5 +103,22 @@ describe('ProfilesService', () => {
     expect(result).not.toHaveProperty('authProviderId');
     expect(result).not.toHaveProperty('userId');
     expect(result).not.toHaveProperty('normalizedUsername');
+  });
+
+  it('returns the public avatar URL when an avatar exists', async () => {
+    findUnique.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo',
+      bio: null,
+      avatarKey: 'user-123/avatar.webp',
+    });
+
+    const result = await service.findByUsername('ricardo');
+
+    expect(getPublicUrl).toHaveBeenCalledWith('user-123/avatar.webp');
+
+    expect(result.avatarUrl).toBe(
+      'https://storage.example.com/avatars/user-123/avatar.webp',
+    );
   });
 });

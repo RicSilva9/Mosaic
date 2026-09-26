@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 interface PublicProfile {
@@ -5,6 +6,7 @@ interface PublicProfile {
   displayName: string;
   bio: string | null;
   avatarKey: string | null;
+  avatarUrl: string | null;
 }
 
 interface ProfilePageProps {
@@ -50,14 +52,24 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <main className="min-h-screen bg-zinc-950 px-6 py-12 text-zinc-50">
       <div className="mx-auto max-w-5xl">
-        <a href="/" className="text-2xl font-black tracking-tight">
-          mosaic<span className="text-violet-500">.</span>
-        </a>
+        <Link href="/" className="text-2xl font-black tracking-tight">
+          mosaic
+          <span className="text-violet-500">.</span>
+        </Link>
 
         <section className="mt-12 rounded-3xl border border-zinc-800 bg-zinc-900/40 p-8">
           <div className="flex flex-wrap items-center gap-6">
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-violet-500/40 bg-violet-500/20 text-3xl font-bold text-violet-300">
-              {initial}
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-violet-500/40 bg-violet-500/20 text-3xl font-bold text-violet-300">
+              {profile.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatarUrl}
+                  alt={`${profile.displayName}'s profile photo`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initial
+              )}
             </div>
 
             <div>

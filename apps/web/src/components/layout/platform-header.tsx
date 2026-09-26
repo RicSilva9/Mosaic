@@ -9,12 +9,13 @@ export function PlatformHeader() {
   const { identity, logout, loggingOut, logoutError } = usePlatformAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
-
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initial =
     identity.profile.displayName.trim().charAt(0).toUpperCase() ||
     identity.profile.username.charAt(0).toUpperCase();
+
+  const avatarUrl = identity.profile.avatarUrl;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -32,12 +33,10 @@ export function PlatformHeader() {
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
-
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
-
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [menuOpen]);
@@ -89,9 +88,18 @@ export function PlatformHeader() {
               aria-expanded={menuOpen}
               aria-controls="account-menu"
               onClick={() => setMenuOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-500/40 bg-violet-500/20 text-sm font-bold text-violet-300 transition hover:bg-violet-500/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-violet-500/40 bg-violet-500/20 text-sm font-bold text-violet-300 transition hover:bg-violet-500/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
             >
-              {initial}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initial
+              )}
             </button>
 
             {menuOpen && (
@@ -99,14 +107,29 @@ export function PlatformHeader() {
                 id="account-menu"
                 className="absolute right-0 top-14 w-64 rounded-2xl border border-zinc-800 bg-zinc-900 p-3 shadow-2xl"
               >
-                <div className="border-b border-zinc-800 px-3 py-3">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {identity.profile.displayName}
-                  </p>
+                <div className="flex items-center gap-3 border-b border-zinc-800 px-3 py-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-violet-500/40 bg-violet-500/20 text-sm font-bold text-violet-300">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      initial
+                    )}
+                  </div>
 
-                  <p className="mt-1 truncate text-xs text-zinc-400">
-                    @{identity.profile.username}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {identity.profile.displayName}
+                    </p>
+
+                    <p className="mt-1 truncate text-xs text-zinc-400">
+                      @{identity.profile.username}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="py-2">

@@ -1,12 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProfilesService } from './profiles.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
+import { ProfilesService } from './profiles.service.js';
 
 describe('ProfilesService - updateMyProfile', () => {
   const findAccount = vi.fn();
   const updateProfile = vi.fn();
+  const getPublicUrl = vi.fn();
 
   let service: ProfilesService;
 
@@ -22,7 +24,15 @@ describe('ProfilesService - updateMyProfile', () => {
       },
     } as unknown as PrismaService;
 
-    service = new ProfilesService(prisma);
+    const storage = {
+      getPublicUrl,
+    } as unknown as StorageService;
+
+    getPublicUrl.mockImplementation(
+      (key: string) => `https://storage.example.com/avatars/${key}`,
+    );
+
+    service = new ProfilesService(prisma, storage);
 
     findAccount.mockResolvedValue({
       userId: 'user-123',
@@ -65,6 +75,7 @@ describe('ProfilesService - updateMyProfile', () => {
     );
 
     expect(result.displayName).toBe('Ricardo Silva');
+    expect(result.avatarUrl).toBeNull();
   });
 
   it('updates the biography', async () => {
@@ -122,6 +133,25 @@ describe('ProfilesService - updateMyProfile', () => {
           userId: 'authenticated-user',
         },
       }),
+    );
+  });
+
+  it('preserves and returns an existing avatar', async () => {
+    updateProfile.mockResolvedValue({
+      username: 'ricardo',
+      displayName: 'Ricardo Silva',
+      bio: null,
+      avatarKey: 'user-123/photo.webp',
+    });
+
+    const result = await service.updateMyProfile('supabase-user-123', {
+      displayName: 'Ricardo Silva',
+    });
+
+    expect(result.avatarKey).toBe('user-123/photo.webp');
+
+    expect(result.avatarUrl).toBe(
+      'https://storage.example.com/avatars/user-123/photo.webp',
     );
   });
 });

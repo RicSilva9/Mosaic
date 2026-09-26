@@ -7,16 +7,14 @@ import {
   it,
   vi,
 } from 'vitest';
-
-import { AuthService } from '../auth/auth.service.js';
-
-import { PrismaService } from '../prisma/prisma.service.js';
-
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
+import { AuthService } from '../auth/auth.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { ProfilesModule } from './profiles.module.js';
 import { ProfilesService } from './profiles.service.js';
 
@@ -30,6 +28,7 @@ describe('Profiles HTTP', () => {
     displayName: 'teste1',
     bio: null,
     avatarKey: null,
+    avatarUrl: null,
   };
 
   beforeAll(async () => {
@@ -37,9 +36,20 @@ describe('Profiles HTTP', () => {
       imports: [ProfilesModule],
     })
       .overrideProvider(ProfilesService)
-      .useValue({ findByUsername })
+      .useValue({
+        findByUsername,
+        updateMyProfile: vi.fn(),
+        uploadMyAvatar: vi.fn(),
+        removeMyAvatar: vi.fn(),
+      })
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(StorageService)
+      .useValue({
+        upload: vi.fn(),
+        remove: vi.fn(),
+        getPublicUrl: vi.fn(),
+      })
       .overrideProvider(AuthService)
       .useValue({
         verifyAccessToken: vi.fn(),
@@ -103,7 +113,7 @@ describe('Profiles HTTP', () => {
       .expect(200);
 
     expect(Object.keys(response.body).sort()).toEqual(
-      ['username', 'displayName', 'bio', 'avatarKey'].sort(),
+      ['username', 'displayName', 'bio', 'avatarKey', 'avatarUrl'].sort(),
     );
 
     expect(response.body).not.toHaveProperty('email');

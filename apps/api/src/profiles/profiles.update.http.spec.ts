@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from '../auth/auth.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { ProfilesModule } from './profiles.module.js';
 import { ProfilesService } from './profiles.service.js';
 
@@ -28,6 +29,7 @@ describe('Profiles update HTTP', () => {
       displayName: 'Ricardo Silva',
       bio: 'Frontend developer',
       avatarKey: null,
+      avatarUrl: null,
     });
 
     const module = await Test.createTestingModule({
@@ -39,10 +41,18 @@ describe('Profiles update HTTP', () => {
       })
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(StorageService)
+      .useValue({
+        upload: vi.fn(),
+        remove: vi.fn(),
+        getPublicUrl: vi.fn(),
+      })
       .overrideProvider(ProfilesService)
       .useValue({
         updateMyProfile,
         findByUsername: vi.fn(),
+        uploadMyAvatar: vi.fn(),
+        removeMyAvatar: vi.fn(),
       })
       .compile();
 
@@ -96,6 +106,7 @@ describe('Profiles update HTTP', () => {
       displayName: 'Ricardo Silva',
       bio: 'Frontend developer',
       avatarKey: null,
+      avatarUrl: null,
     });
   });
 
