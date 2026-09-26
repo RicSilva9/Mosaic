@@ -8,6 +8,8 @@ import {
   vi,
 } from 'vitest';
 
+import { AuthService } from '../auth/auth.service.js';
+
 import { PrismaService } from '../prisma/prisma.service.js';
 
 import { Test } from '@nestjs/testing';
@@ -38,6 +40,10 @@ describe('Profiles HTTP', () => {
       .useValue({ findByUsername })
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(AuthService)
+      .useValue({
+        verifyAccessToken: vi.fn(),
+      })
       .compile();
 
     app = module.createNestApplication();

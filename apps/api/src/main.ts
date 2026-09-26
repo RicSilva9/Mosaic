@@ -1,8 +1,8 @@
 import 'dotenv/config';
 
 import { ValidationPipe } from '@nestjs/common';
-
 import { NestFactory } from '@nestjs/core';
+
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -10,7 +10,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 

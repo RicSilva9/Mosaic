@@ -9,6 +9,7 @@ export function PlatformHeader() {
   const { identity, logout, loggingOut, logoutError } = usePlatformAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initial =
@@ -31,10 +32,12 @@ export function PlatformHeader() {
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
+
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
+
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [menuOpen]);
@@ -43,7 +46,8 @@ export function PlatformHeader() {
     <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-7xl items-center gap-8 px-6">
         <Link href="/" className="shrink-0 text-2xl font-black tracking-tight">
-          mosaic<span className="text-violet-500">.</span>
+          mosaic
+          <span className="text-violet-500">.</span>
         </Link>
 
         <nav
@@ -112,6 +116,14 @@ export function PlatformHeader() {
                     className="block rounded-lg px-3 py-3 text-sm text-zinc-200 transition hover:bg-zinc-800"
                   >
                     My profile
+                  </Link>
+
+                  <Link
+                    href="/settings/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-lg px-3 py-3 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                  >
+                    Edit profile
                   </Link>
                 </div>
 

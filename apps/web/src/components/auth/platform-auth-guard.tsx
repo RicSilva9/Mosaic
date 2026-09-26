@@ -24,6 +24,7 @@ interface Identity {
 
 interface PlatformAuthContextValue {
   identity: Identity;
+  updateIdentityProfile: (profile: { displayName: string }) => void;
   logout: () => Promise<void>;
   loggingOut: boolean;
   logoutError: string;
@@ -136,6 +137,23 @@ export function PlatformAuthGuard({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [checkAccess, retryCount]);
 
+  const updateIdentityProfile = useCallback(
+    (profile: { displayName: string }) => {
+      setIdentity((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          profile: {
+            ...current.profile,
+            displayName: profile.displayName,
+          },
+        };
+      });
+    },
+    [],
+  );
+
   async function logout() {
     if (loggingOut) return;
 
@@ -203,6 +221,7 @@ export function PlatformAuthGuard({ children }: { children: ReactNode }) {
     <PlatformAuthContext.Provider
       value={{
         identity,
+        updateIdentityProfile,
         logout,
         loggingOut,
         logoutError,
