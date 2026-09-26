@@ -2,17 +2,28 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { VideoCard } from "@/components/feed/video-card";
+import { mockVideos } from "@/lib/mock-videos";
 import { supabase } from "@/lib/supabase/client";
 
 const API_URL = "http://localhost:3001";
 
 type PageStatus = "checking" | "ready" | "error";
 
+interface Identity {
+  id: string;
+  profile: {
+    username: string;
+    displayName: string;
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<PageStatus>("checking");
+  const [identity, setIdentity] = useState<Identity | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -30,7 +41,9 @@ export default function HomePage() {
 
         if (signal.aborted) return;
 
-        if (sessionError) throw sessionError;
+        if (sessionError) {
+          throw sessionError;
+        }
 
         if (!session) {
           router.replace("/login");
@@ -64,15 +77,15 @@ export default function HomePage() {
           );
         }
 
-        const identity = await response.json();
+        const data: Identity = await response.json();
 
         if (signal.aborted) return;
 
-        if (!identity?.id || !identity?.profile?.username) {
+        if (!data?.id || !data?.profile?.username) {
           throw new Error("Invalid profile response.");
         }
 
-        setEmail(session.user.email ?? "");
+        setIdentity(data);
         setStatus("ready");
       } catch (err) {
         if (signal.aborted) return;
@@ -92,9 +105,7 @@ export default function HomePage() {
 
     void checkAccess(controller.signal);
 
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [checkAccess, retryCount]);
 
   async function handleLogout() {
@@ -106,9 +117,11 @@ export default function HomePage() {
     try {
       const { error: logoutError } = await supabase.auth.signOut();
 
-      if (logoutError) throw logoutError;
+      if (logoutError) {
+        throw logoutError;
+      }
 
-      setEmail("");
+      setIdentity(null);
       setStatus("checking");
 
       router.replace("/login");
@@ -126,19 +139,17 @@ export default function HomePage() {
 
   if (status === "checking") {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p role="status" className="text-sm text-zinc-400">
-          Checking your account...
-        </p>
+      <main className="flex min-h-[70vh] items-center justify-center px-6">
+        <p className="text-sm text-zinc-400">Checking your account...</p>
       </main>
     );
   }
 
   if (status === "error") {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6">
+      <main className="flex min-h-[70vh] items-center justify-center px-6">
         <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
-          <h1 className="text-xl font-semibold">Something went wrong</h1>
+          <h1 className="text-xl font-bold">Something went wrong</h1>
 
           <p role="alert" className="mt-4 text-sm text-red-300">
             {error}
@@ -147,7 +158,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setRetryCount((count) => count + 1)}
-            className="mt-6 rounded-lg bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-500"
+            className="mt-6 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold transition hover:bg-violet-500"
           >
             Try again
           </button>
@@ -157,33 +168,62 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
-        <h1 className="text-3xl font-black">
-          mosaic<span className="text-violet-500">.</span>
-        </h1>
+    <main className="px-6 py-10">
+      <section className="mb-12">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <p className="mb-2 text-sm font-medium text-violet-400">
+              Welcome back, @{identity?.profile.username}
+            </p>
 
-        <p className="mt-6 text-xl font-semibold">Welcome to Mosaic!</p>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+              Discover
+            </h1>
 
-        <p className="mt-3 text-sm text-zinc-400">Signed in as</p>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
+              Explore creative ideas, discover AI-generated videos and find
+              inspiration for your next creation.
+            </p>
+          </div>
 
-        <p className="mt-1 break-all text-sm font-medium">{email}</p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="rounded-xl border border-zinc-800 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-900 disabled:opacity-50"
+          >
+            {loggingOut ? "Signing out..." : "Sign out"}
+          </button>
+        </div>
 
         {error && (
           <p role="alert" className="mt-5 text-sm text-red-300">
             {error}
           </p>
         )}
+      </section>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="mt-8 w-full rounded-lg border border-zinc-700 px-4 py-3 text-sm font-semibold transition hover:bg-zinc-800 disabled:opacity-50"
-        >
-          {loggingOut ? "Signing out..." : "Sign out"}
-        </button>
-      </div>
+      <section aria-labelledby="feed-heading">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div>
+            <h2 id="feed-heading" className="text-xl font-bold tracking-tight">
+              Explore creations
+            </h2>
+
+            <p className="mt-1 text-xs text-zinc-500">Preview content</p>
+          </div>
+
+          <span className="rounded-full border border-zinc-800 px-4 py-2 text-xs text-zinc-400">
+            All categories
+          </span>
+        </div>
+
+        <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
+          {mockVideos.map((video) => (
+            <VideoCard key={video.id} video={video} />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
