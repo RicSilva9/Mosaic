@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -14,6 +18,36 @@ interface CreateIdentityInput {
 @Injectable()
 export class IdentityService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getIdentity(authProvider: string, authProviderId: string) {
+    const account = await this.prisma.account.findUnique({
+      where: {
+        authProvider_authProviderId: {
+          authProvider,
+          authProviderId,
+        },
+      },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    if (!account || !account.user.profile) {
+      throw new NotFoundException('Mosaic profile not found');
+    }
+
+    return {
+      id: account.user.id,
+      profile: {
+        username: account.user.profile.username,
+        displayName: account.user.profile.displayName,
+      },
+    };
+  }
 
   async createIdentity(input: CreateIdentityInput) {
     const normalizedUsername = input.username.trim().toLowerCase();

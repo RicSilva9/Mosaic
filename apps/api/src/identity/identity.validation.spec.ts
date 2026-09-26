@@ -9,7 +9,11 @@ import {
   vi,
 } from 'vitest';
 
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  type INestApplication,
+  NotFoundException,
+  ValidationPipe,
+} from '@nestjs/common';
 
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -22,6 +26,7 @@ describe('Identity registration validation', () => {
   let app: INestApplication;
 
   const createIdentity = vi.fn();
+  const getIdentity = vi.fn();
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -29,7 +34,10 @@ describe('Identity registration validation', () => {
       providers: [
         {
           provide: IdentityService,
-          useValue: { createIdentity },
+          useValue: {
+            createIdentity,
+            getIdentity,
+          },
         },
       ],
     })
@@ -76,6 +84,7 @@ describe('Identity registration validation', () => {
     createIdentity.mockResolvedValue({
       id: 'internal-user-id',
     });
+    getIdentity.mockReset();
   });
 
   afterAll(async () => {
@@ -189,5 +198,52 @@ describe('Identity registration validation', () => {
 
     expect(response.body).not.toHaveProperty('account');
     expect(response.body).not.toHaveProperty('email');
+  });
+
+  it('returns the authenticated user public profile', async () => {
+    getIdentity.mockResolvedValueOnce({
+      id: 'internal-user-id',
+      profile: {
+        username: 'ricardo',
+        displayName: 'Ricardo Silva',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/identity/me')
+      .expect(200);
+
+    expect(getIdentity).toHaveBeenCalledExactlyOnceWith(
+      'supabase',
+      'verified-test-user',
+    );
+
+    expect(response.body).toEqual({
+      id: 'internal-user-id',
+      profile: {
+        username: 'ricardo',
+        displayName: 'Ricardo Silva',
+      },
+    });
+  });
+
+  it('returns 404 when the authenticated user has no profile', async () => {
+    getIdentity.mockRejectedValueOnce(
+      new NotFoundException('Mosaic profile not found'),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/identity/me')
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+      message: 'Mosaic profile not found',
+    });
+
+    expect(getIdentity).toHaveBeenCalledExactlyOnceWith(
+      'supabase',
+      'verified-test-user',
+    );
   });
 });

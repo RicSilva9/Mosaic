@@ -148,6 +148,39 @@ export default function AuthTestPage() {
     }
   }
 
+  async function getMosaicProfile() {
+    setLoading(true);
+    setResult("");
+
+    try {
+      const accessToken = await getAccessToken();
+
+      const response = await fetch(`${API_URL}/identity/me`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const body = await response.json();
+
+      setResult(
+        JSON.stringify(
+          {
+            status: response.status,
+            body,
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      showError(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 p-8">
       <h1 className="text-2xl font-bold">Mosaic — Authentication Test</h1>
@@ -228,6 +261,14 @@ export default function AuthTestPage() {
         className="rounded bg-indigo-600 p-3 text-white disabled:opacity-50"
       >
         Register Mosaic Profile
+      </button>
+
+      <button
+        onClick={getMosaicProfile}
+        disabled={loading}
+        className="rounded bg-teal-600 p-3 text-white disabled:opacity-50"
+      >
+        Get My Mosaic Profile
       </button>
 
       <hr className="my-2" />

@@ -5,6 +5,7 @@ import {
   Req,
   UnauthorizedException,
   UseGuards,
+  Get,
 } from '@nestjs/common';
 
 import { IdentityService } from './identity.service.js';
@@ -16,6 +17,21 @@ import type { AuthenticatedRequest } from '../auth/guards/auth.guard.js';
 @Controller('identity')
 export class IdentityController {
   constructor(private readonly identityService: IdentityService) {}
+
+  @UseGuards(AuthGuard)
+  @Get('me')
+  async me(@Req() request: AuthenticatedRequest) {
+    const authenticatedUser = request.user;
+
+    if (!authenticatedUser) {
+      throw new UnauthorizedException('Authentication is required');
+    }
+
+    return this.identityService.getIdentity(
+      'supabase',
+      authenticatedUser.providerId,
+    );
+  }
 
   @UseGuards(AuthGuard)
   @Post('register')

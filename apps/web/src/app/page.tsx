@@ -1,69 +1,189 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
+
+const API_URL = "http://localhost:3001";
+
+type PageStatus = "checking" | "ready" | "error";
+
+export default function HomePage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<PageStatus>("checking");
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+
+  const checkAccess = useCallback(
+    async (signal: AbortSignal) => {
+      setStatus("checking");
+      setError("");
+
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (signal.aborted) return;
+
+        if (sessionError) throw sessionError;
+
+        if (!session) {
+          router.replace("/login");
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/identity/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+          signal,
+        });
+
+        if (signal.aborted) return;
+
+        if (response.status === 404) {
+          router.replace("/complete-profile");
+          return;
+        }
+
+        if (response.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Could not verify your profile (HTTP ${response.status}).`,
+          );
+        }
+
+        const identity = await response.json();
+
+        if (signal.aborted) return;
+
+        if (!identity?.id || !identity?.profile?.username) {
+          throw new Error("Invalid profile response.");
+        }
+
+        setEmail(session.user.email ?? "");
+        setStatus("ready");
+      } catch (err) {
+        if (signal.aborted) return;
+
+        setError(
+          err instanceof Error ? err.message : "Could not verify your account.",
+        );
+
+        setStatus("error");
+      }
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void checkAccess(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [checkAccess, retryCount]);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setError("");
+
+    try {
+      const { error: logoutError } = await supabase.auth.signOut();
+
+      if (logoutError) throw logoutError;
+
+      setEmail("");
+      setStatus("checking");
+
+      router.replace("/login");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not sign out. Please try again.",
+      );
+
+      setLoggingOut(false);
+    }
+  }
+
+  if (status === "checking") {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p role="status" className="text-sm text-zinc-400">
+          Checking your account...
+        </p>
+      </main>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
+          <h1 className="text-xl font-semibold">Something went wrong</h1>
+
+          <p role="alert" className="mt-4 text-sm text-red-300">
+            {error}
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          <button
+            type="button"
+            onClick={() => setRetryCount((count) => count + 1)}
+            className="mt-6 rounded-lg bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-500"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Try again
+          </button>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center px-6">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
+        <h1 className="text-3xl font-black">
+          mosaic<span className="text-violet-500">.</span>
+        </h1>
+
+        <p className="mt-6 text-xl font-semibold">Welcome to Mosaic!</p>
+
+        <p className="mt-3 text-sm text-zinc-400">Signed in as</p>
+
+        <p className="mt-1 break-all text-sm font-medium">{email}</p>
+
+        {error && (
+          <p role="alert" className="mt-5 text-sm text-red-300">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="mt-8 w-full rounded-lg border border-zinc-700 px-4 py-3 text-sm font-semibold transition hover:bg-zinc-800 disabled:opacity-50"
+        >
+          {loggingOut ? "Signing out..." : "Sign out"}
+        </button>
+      </div>
+    </main>
   );
 }

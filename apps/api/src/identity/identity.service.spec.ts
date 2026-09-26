@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import { IdentityService } from './identity.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -155,5 +155,51 @@ describe('IdentityService', () => {
     });
 
     expect(findProfile).toHaveBeenCalledOnce();
+  });
+
+  it('returns the profile associated with an authenticated account', async () => {
+    findAccount.mockResolvedValue({
+      user: {
+        id: 'internal-user-id',
+        profile: {
+          username: 'ricardo',
+          displayName: 'Ricardo Silva',
+        },
+      },
+    });
+
+    const result = await service.getIdentity('supabase', 'external-user-id');
+
+    expect(findAccount).toHaveBeenCalledWith({
+      where: {
+        authProvider_authProviderId: {
+          authProvider: 'supabase',
+          authProviderId: 'external-user-id',
+        },
+      },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      id: 'internal-user-id',
+      profile: {
+        username: 'ricardo',
+        displayName: 'Ricardo Silva',
+      },
+    });
+  });
+
+  it('returns 404 when the authenticated account has no Mosaic identity', async () => {
+    findAccount.mockResolvedValue(null);
+
+    await expect(
+      service.getIdentity('supabase', 'unknown-user'),
+    ).rejects.toThrow(NotFoundException);
   });
 });
