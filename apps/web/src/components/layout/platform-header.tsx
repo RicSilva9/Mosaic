@@ -106,9 +106,13 @@ export function PlatformHeader() {
                 </div>
 
                 <div className="py-2">
-                  <span className="block cursor-not-allowed rounded-lg px-3 py-3 text-sm text-zinc-500">
-                    My profile · Coming soon
-                  </span>
+                  <Link
+                    href={`/u/${encodeURIComponent(identity.profile.username)}`}
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-lg px-3 py-3 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                  >
+                    My profile
+                  </Link>
                 </div>
 
                 <div className="border-t border-zinc-800 pt-2">
