@@ -22,6 +22,7 @@ model User {
 
   account Account?
   profile Profile?
+  prompts Prompt[]
 }
 
 model Account {
@@ -58,4 +59,48 @@ model Profile {
 model DatabaseCheck {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
+}
+
+enum PromptStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Prompt {
+  id          String       @id @default(uuid()) @db.Uuid
+  authorId    String       @db.Uuid
+  title       String
+  description String?
+  content     String
+  videoKey    String?
+  status      PromptStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  author     User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  categories Category[]
+  tags       Tag[]
+
+  @@index([authorId, createdAt])
+  @@index([status, publishedAt])
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  prompts Prompt[]
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  prompts Prompt[]
 }
