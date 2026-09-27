@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   Req,
   UnauthorizedException,
@@ -16,16 +17,26 @@ import { PromptsService } from './prompts.service.js';
 export class PromptsController {
   constructor(private readonly promptsService: PromptsService) {}
 
+  private getProviderId(request: AuthenticatedRequest): string {
+    if (!request.user) {
+      throw new UnauthorizedException('Authentication is required');
+    }
+
+    return request.user.providerId;
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   async createDraft(
     @Req() request: AuthenticatedRequest,
     @Body() body: CreatePromptDto,
   ) {
-    if (!request.user) {
-      throw new UnauthorizedException('Authentication is required');
-    }
+    return this.promptsService.createDraft(this.getProviderId(request), body);
+  }
 
-    return this.promptsService.createDraft(request.user.providerId, body);
+  @Get('me/drafts')
+  @UseGuards(AuthGuard)
+  async findMyDrafts(@Req() request: AuthenticatedRequest) {
+    return this.promptsService.findMyDrafts(this.getProviderId(request));
   }
 }

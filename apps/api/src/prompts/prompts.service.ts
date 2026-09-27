@@ -7,7 +7,7 @@ import { CreatePromptDto } from './dto/create-prompt.dto.js';
 export class PromptsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createDraft(authProviderId: string, input: CreatePromptDto) {
+  private async findAccount(authProviderId: string) {
     const account = await this.prisma.account.findUnique({
       where: {
         authProvider_authProviderId: {
@@ -23,6 +23,12 @@ export class PromptsService {
     if (!account) {
       throw new NotFoundException('Mosaic account not found');
     }
+
+    return account;
+  }
+
+  async createDraft(authProviderId: string, input: CreatePromptDto) {
+    const account = await this.findAccount(authProviderId);
 
     return this.prisma.prompt.create({
       data: {
@@ -40,6 +46,29 @@ export class PromptsService {
         status: true,
         createdAt: true,
         updatedAt: true,
+      },
+    });
+  }
+
+  async findMyDrafts(authProviderId: string) {
+    const account = await this.findAccount(authProviderId);
+
+    return this.prisma.prompt.findMany({
+      where: {
+        authorId: account.userId,
+        status: 'DRAFT',
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        content: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
